@@ -1,0 +1,11 @@
+[
+  {
+    "number": 101,
+    "html_url": "https://github.com/org/repo/issues/101",
+    "title": "Alpha",
+    "labels": [{"name":"area/db"}],
+    "state": "open",
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-02T00:00:00Z"
+  }
+]

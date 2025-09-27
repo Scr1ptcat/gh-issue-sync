@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gh-issue-sync-svc"
+version = "0.1.0"
+description = "Stateless microservice to validate/sync GitHub Issues into Projects v2"
+readme = "README_SERVICE.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115",
+  "httpx[http2]>=0.27",
+  "uvicorn>=0.30",
+  "pydantic>=2.8",
+  "pydantic-settings>=2.3"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "pytest-asyncio>=0.23",
+  "respx>=0.21",
+  "ruff>=0.6",
+  "yq>=3.2"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*", "svc*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

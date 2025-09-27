@@ -1,0 +1,11 @@
+[
+  {
+    "number": 102,
+    "html_url": "https://github.com/org/repo/issues/102",
+    "title": "Beta",
+    "labels": [{"name":"area/cli"}],
+    "state": "closed",
+    "created_at": "2024-01-03T00:00:00Z",
+    "updated_at": "2024-01-04T00:00:00Z"
+  }
+]

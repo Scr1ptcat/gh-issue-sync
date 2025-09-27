@@ -1,1 +1,1 @@
-# gh-issue-sync
+See `README_SERVICE.md`.

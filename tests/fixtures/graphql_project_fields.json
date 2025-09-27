@@ -1,0 +1,19 @@
+{
+  "data": {
+    "node": {
+      "fields": {
+        "nodes": [
+          {
+            "__typename": "ProjectV2SingleSelectField",
+            "id": "F1",
+            "name": "Status",
+            "options": [
+              {"id":"S1","name":"To do"},
+              {"id":"S2","name":"In progress"}
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

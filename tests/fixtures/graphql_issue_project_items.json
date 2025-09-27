@@ -1,0 +1,27 @@
+{
+  "data": {
+    "repository": {
+      "issue": {
+        "id": "ISSUE_NODE",
+        "projectItems": {
+          "nodes": [
+            {
+              "id": "ITEM123",
+              "project": {"id":"P1"},
+              "fieldValues": {
+                "nodes": [
+                  {
+                    "__typename":"ProjectV2ItemFieldSingleSelectValue",
+                    "field":{"__typename":"ProjectV2SingleSelectField","name":"Status"},
+                    "name":"To do",
+                    "optionId":"S1"
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

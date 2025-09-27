@@ -1,0 +1,24 @@
+{
+  "owner": "USEPA",
+  "repo": "AIRules",
+  "project_title": "AIRules Baseline Alignment",
+  "dry_run": true,
+  "items": [
+    {
+      "title": "Deprecate old test suite",
+      "summary": "Identify and mark/remove legacy pytest tests that no longer reflect current CLI",
+      "epic_label": "epic/E2-Testing",
+      "labels": ["area/testing","prio/P1"],
+      "depends_on": ["E1"],
+      "estimate": "S"
+    },
+    {
+      "title": "Postgres best-practices config",
+      "summary": "Introduce PG config (TLS, pool, timeouts, schema), env vars, secrets",
+      "epic_label": "epic/E3-Postgres",
+      "labels": ["area/db","prio/P1"],
+      "depends_on": ["E2"],
+      "estimate": "M"
+    }
+  ]
+}

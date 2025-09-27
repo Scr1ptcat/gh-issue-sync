@@ -1,0 +1,33 @@
+### Health
+GET http://localhost:8080/health
+
+### List issues (uses env defaults if omitted)
+GET http://localhost:8080/issues?owner=USEPA&repo=AIRules
+If-None-Match: W/"previous-etag"
+
+### Validate (dry run)
+POST http://localhost:8080/validate
+Content-Type: application/json
+
+< ./examples/issues_spec.json
+
+### Sync (apply changes)
+POST http://localhost:8080/sync
+Content-Type: application/json
+
+{
+  "owner": "USEPA",
+  "repo": "AIRules",
+  "project_title": "AIRules Baseline Alignment",
+  "dry_run": false,
+  "items": [
+    {
+      "title": "CI: Run pytest matrix (3.12/3.13)",
+      "summary": "Add GH workflow running pytest on 3.12 and 3.13 with artifacts",
+      "epic_label": "epic/E2-Testing",
+      "labels": ["area/testing","prio/P1"],
+      "depends_on": ["E2"],
+      "estimate": "S"
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "data": {
+    "repository": { "id": "R1", "owner": { "id": "O1", "login": "org", "__typename": "Organization" } },
+    "viewer": { "id": "U1", "login": "viewer" }
+  }
+}

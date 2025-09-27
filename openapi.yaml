@@ -1,0 +1,205 @@
+openapi: 3.0.3
+info:
+  title: GitHub Issue Sync Service
+  version: "1.0.0"
+  description: Stateless service to validate/sync GitHub Issues into a Projects v2 board.
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: health
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /issues:
+    get:
+      summary: List issues with optional project enrichment
+      operationId: listIssues
+      parameters:
+        - in: query
+          name: owner
+          required: false
+          schema: { type: string }
+        - in: query
+          name: repo
+          required: false
+          schema: { type: string }
+        - in: query
+          name: project_title
+          required: false
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1, minimum: 1 }
+        - in: query
+          name: per_page
+          schema: { type: integer, default: 50, minimum: 1, maximum: 100 }
+        - in: header
+          name: If-None-Match
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: Issues
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IssuesListResponse"
+        "304":
+          description: Not Modified (ETag)
+  /validate:
+    post:
+      summary: Validate a set of issues against GitHub (no writes)
+      operationId: validate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueSpecList"
+      responses:
+        "200":
+          description: Validation report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationReport"
+        "422":
+          description: Validation error
+  /sync:
+    post:
+      summary: Create/update/label issues and add to Project
+      operationId: sync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IssueSpecList"
+      responses:
+        "200":
+          description: Sync report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncReport"
+        "422":
+          description: Validation error
+components:
+  schemas:
+    IssueSpec:
+      type: object
+      required: [title, summary]
+      properties:
+        title: { type: string }
+        summary: { type: string }
+        epic_label: { type: string, nullable: true }
+        epic_id: { type: string, nullable: true, description: "Back-compat; mapped to epic_label" }
+        labels: { type: array, items: { type: string }, default: [] }
+        depends_on: { type: array, items: { type: string }, default: [] }
+        estimate: { type: string, enum: ["S", "M", "L"], nullable: true }
+    IssueSpecList:
+      type: object
+      required: [owner, repo, project_title, items]
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        project_title: { type: string }
+        dry_run: { type: boolean, default: false }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/IssueSpec" }
+    IssueRecord:
+      type: object
+      required: [number, url, title, labels, state, created_at, updated_at]
+      properties:
+        number: { type: integer }
+        url: { type: string, format: uri }
+        title: { type: string }
+        labels: { type: array, items: { type: string } }
+        state: { type: string, enum: ["open", "closed"] }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        project_item_id: { type: string, nullable: true }
+        status_option: { type: string, nullable: true }
+    ReportItem:
+      type: object
+      required: [title, number, url]
+      properties:
+        title: { type: string }
+        number: { type: integer }
+        url: { type: string, format: uri }
+    UpdatedChange:
+      type: object
+      required: [title, number, url, changes]
+      properties:
+        title: { type: string }
+        number: { type: integer }
+        url: { type: string, format: uri }
+        changes:
+          type: array
+          items:
+            type: string
+            enum: ["labels", "project_item", "status"]
+    ErrorItem:
+      type: object
+      required: [title, reason, detail]
+      properties:
+        title: { type: string }
+        reason: { type: string }
+        detail: { type: string }
+    Metrics:
+      type: object
+      properties:
+        total: { type: integer }
+        created: { type: integer }
+        updated: { type: integer }
+        unchanged: { type: integer }
+        errors: { type: integer }
+        duration_ms: { type: integer }
+    ValidationReport:
+      type: object
+      required: [owner, repo, project_title, created, updated, unchanged, errors, metrics]
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        project_title: { type: string }
+        project_url: { type: string, nullable: true }
+        created: { type: array, items: { $ref: "#/components/schemas/ReportItem" } }
+        updated: { type: array, items: { $ref: "#/components/schemas/UpdatedChange" } }
+        unchanged: { type: array, items: { $ref: "#/components/schemas/ReportItem" } }
+        errors: { type: array, items: { $ref: "#/components/schemas/ErrorItem" } }
+        metrics: { $ref: "#/components/schemas/Metrics" }
+    SyncReport:
+      allOf:
+        - $ref: "#/components/schemas/ValidationReport"
+    IssuesPage:
+      type: object
+      required: [page, per_page, has_next]
+      properties:
+        page: { type: integer }
+        per_page: { type: integer }
+        has_next: { type: boolean }
+        next_page: { type: integer, nullable: true }
+    IssuesListResponse:
+      type: object
+      required: [owner, repo, pagination, items]
+      properties:
+        owner: { type: string }
+        repo: { type: string }
+        project_title: { type: string, nullable: true }
+        etag: { type: string, nullable: true }
+        pagination: { $ref: "#/components/schemas/IssuesPage" }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/IssueRecord" }
