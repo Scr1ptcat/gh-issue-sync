@@ -84,19 +84,29 @@ class Orchestrator:
         project_id = None
         status_field_id = None
         if project_title:
-            project_id, _, _ = await self.ensure_project(owner, repo, project_title, create_if_missing=False)
+            project_id, _, _ = await self.ensure_project(
+                owner, repo, project_title, create_if_missing=False
+            )
             if project_id:
-                status_field_id, _, _ = await self.gh.get_status_field_and_option(project_id)
+                status_field_id, _, _ = await self.gh.get_status_field_and_option(
+                    project_id
+                )
 
-        records: List[IssueRecord] = []
+        # Removed unused variable: records
 
         async def enrich(item: Dict[str, Any]) -> IssueRecord:
-            labels = [l["name"] for l in item.get("labels", [])] if isinstance(item.get("labels"), list) else []
+            labels = (
+                [label["name"] for label in item.get("labels", [])]
+                if isinstance(item.get("labels"), list)
+                else []
+            )
             project_item_id = None
             status_name = None
             if project_id:
                 try:
-                    pid, sname = await self.gh.get_issue_project_item_and_status(owner, repo, item["number"], project_id)
+                    pid, sname = await self.gh.get_issue_project_item_and_status(
+                        owner, repo, item["number"], project_id
+                    )
                     project_item_id, status_name = pid, sname
                 except GitHubError:
                     # Non-fatal for listing
@@ -244,22 +254,44 @@ class Orchestrator:
 
                 if state["existing"] is None:
                     if spec_list.dry_run:
-                        report.created.append(ReportItem(title=spec.title, number=0, url=""))
+                        report.created.append(
+                            ReportItem(title=spec.title, number=0, url="")
+                        )
                         continue
                     body = build_issue_body(spec, spec_list.project_title)
-                    created = await self.gh.create_issue(spec_list.owner, spec_list.repo, spec.title, body, desired_labels)
-                    created_item = created
+                    created = await self.gh.create_issue(
+                        spec_list.owner,
+                        spec_list.repo,
+                        spec.title,
+                        body,
+                        desired_labels,
+                    )
                     # add to project
-                    issue_node_id = await self.gh.get_issue_node_id(spec_list.owner, spec_list.repo, created["number"])
+                    issue_node_id = await self.gh.get_issue_node_id(
+                        spec_list.owner, spec_list.repo, created["number"]
+                    )
                     if project_id and issue_node_id:
                         await self.gh.add_item_to_project(project_id, issue_node_id)
                         # fetch item id to set status
-                        item_id, cur_status = await self.gh.get_issue_project_item_and_status(
-                            spec_list.owner, spec_list.repo, created["number"], project_id
+                        item_id, cur_status = (
+                            await self.gh.get_issue_project_item_and_status(
+                                spec_list.owner,
+                                spec_list.repo,
+                                created["number"],
+                                project_id,
+                            )
                         )
                         if item_id and status_field_id and todo_opt_id:
-                            await self.gh.update_item_status(project_id, item_id, status_field_id, todo_opt_id)
-                    report.created.append(ReportItem(title=spec.title, number=created["number"], url=created["html_url"]))
+                            await self.gh.update_item_status(
+                                project_id, item_id, status_field_id, todo_opt_id
+                            )
+                    report.created.append(
+                        ReportItem(
+                            title=spec.title,
+                            number=created["number"],
+                            url=created["html_url"],
+                        )
+                    )
                     continue  # next spec
 
                 # existing: apply additive labels
