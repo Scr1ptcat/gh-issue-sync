@@ -14,7 +14,9 @@ from app.service import Orchestrator
 
 async def run(mode: str, spec: IssueSpecList) -> dict:
     settings = get_settings()
-    gh = GitHubClient(settings.gh_token, settings.request_timeout_seconds, settings.max_retries)
+    gh = GitHubClient(
+        settings.gh_token, settings.request_timeout_seconds, settings.max_retries
+    )
     try:
         orch = Orchestrator(gh)
         if mode == "validate":

@@ -1,0 +1,8 @@
+
+.venv/
+
+gh_issue_sync_svc.egg-info/
+
+tests/__pycache__/
+
+app/__pycache__/

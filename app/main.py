@@ -3,13 +3,13 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response
+from fastapi import Depends, FastAPI, Header, Request, Response
 from fastapi.responses import JSONResponse
 
 from .config import Settings, get_settings
 from .github import GitHubClient
-from .logging import configure_logging, new_request_id, redact_headers
-from .schemas import IssueSpecList, IssuesListResponse, SyncReport, ValidationReport
+from .logging import configure_logging, new_request_id
+from .schemas import IssuesListResponse, IssueSpecList, SyncReport, ValidationReport
 from .service import Orchestrator
 
 app = FastAPI(title="GitHub Issue Sync Service", version="1.0.0")
@@ -68,10 +68,14 @@ async def list_issues(
     repo_eff = _effective(repo, settings.default_repo)
     project_eff = project_title or settings.default_project_title
 
-    gh = GitHubClient(settings.gh_token, settings.request_timeout_seconds, settings.max_retries)
+    gh = GitHubClient(
+        settings.gh_token, settings.request_timeout_seconds, settings.max_retries
+    )
     try:
         orch = Orchestrator(gh)
-        resp = await orch.list_issues(owner_eff, repo_eff, project_eff, page, per_page, if_none_match)
+        resp = await orch.list_issues(
+            owner_eff, repo_eff, project_eff, page, per_page, if_none_match
+        )
         if resp.items == [] and resp.etag and if_none_match == resp.etag:
             # Upstream 304; honor
             return JSONResponse(status_code=304, content={"status": "not_modified"})
@@ -83,7 +87,9 @@ async def list_issues(
 @app.post("/validate", response_model=ValidationReport)
 async def validate(payload: IssueSpecList, settings: Settings = Depends(get_settings)):
     # per-request overrides are in the payload itself
-    gh = GitHubClient(settings.gh_token, settings.request_timeout_seconds, settings.max_retries)
+    gh = GitHubClient(
+        settings.gh_token, settings.request_timeout_seconds, settings.max_retries
+    )
     try:
         orch = Orchestrator(gh)
         report = await orch.validate(payload)
@@ -94,7 +100,9 @@ async def validate(payload: IssueSpecList, settings: Settings = Depends(get_sett
 
 @app.post("/sync", response_model=SyncReport)
 async def sync(payload: IssueSpecList, settings: Settings = Depends(get_settings)):
-    gh = GitHubClient(settings.gh_token, settings.request_timeout_seconds, settings.max_retries)
+    gh = GitHubClient(
+        settings.gh_token, settings.request_timeout_seconds, settings.max_retries
+    )
     try:
         orch = Orchestrator(gh)
         report = await orch.sync(payload)

@@ -5,7 +5,6 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-
 # ---------- Input Schemas ----------
 
 Estimate = Literal["S", "M", "L"]
@@ -15,7 +14,9 @@ class IssueSpec(BaseModel):
     title: str
     summary: str
     epic_label: Optional[str] = None
-    epic_id: Optional[str] = None  # Back-compat for provided sample; mapped to epic_label internally.
+    epic_id: Optional[str] = (
+        None  # Back-compat for provided sample; mapped to epic_label internally.
+    )
     labels: List[str] = Field(default_factory=list)
     depends_on: List[str] = Field(default_factory=list)
     estimate: Optional[Estimate] = None
@@ -46,6 +47,7 @@ class IssueSpecList(BaseModel):
 
 
 # ---------- Output Schemas ----------
+
 
 class IssueRecord(BaseModel):
     number: int
