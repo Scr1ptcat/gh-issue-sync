@@ -4,14 +4,14 @@ import asyncio
 import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from .github import GitHubClient, GitHubError, slugify, STATUS_NAMES
+from .github import STATUS_NAMES, GitHubClient, GitHubError, slugify
 from .schemas import (
     ErrorItem,
     IssueRecord,
-    IssueSpec,
-    IssueSpecList,
     IssuesListResponse,
     IssuesPage,
+    IssueSpec,
+    IssueSpecList,
     Metrics,
     ReportItem,
     SyncReport,
@@ -56,9 +56,17 @@ class Orchestrator:
     # ---------- Issues listing (with optional project enrichment) ----------
 
     async def list_issues(
-        self, owner: str, repo: str, project_title: Optional[str], page: int, per_page: int, etag: Optional[str]
+        self,
+        owner: str,
+        repo: str,
+        project_title: Optional[str],
+        page: int,
+        per_page: int,
+        etag: Optional[str],
     ) -> IssuesListResponse:
-        issues, resp_etag, has_next = await self.gh.list_issues(owner, repo, page, per_page, if_none_match=etag)
+        issues, resp_etag, has_next = await self.gh.list_issues(
+            owner, repo, page, per_page, if_none_match=etag
+        )
         if resp_etag and issues == [] and not has_next:
             # Upstream 304 -> bubble through as empty with etag (caller should set 304)
             return IssuesListResponse(
@@ -66,7 +74,9 @@ class Orchestrator:
                 repo=repo,
                 project_title=project_title,
                 etag=resp_etag,
-                pagination=IssuesPage(page=page, per_page=per_page, has_next=False, next_page=None),
+                pagination=IssuesPage(
+                    page=page, per_page=per_page, has_next=False, next_page=None
+                ),
                 items=[],
             )
 
@@ -118,7 +128,9 @@ class Orchestrator:
             repo=repo,
             project_title=project_title,
             etag=resp_etag,
-            pagination=IssuesPage(page=page, per_page=per_page, has_next=has_next, next_page=next_page),
+            pagination=IssuesPage(
+                page=page, per_page=per_page, has_next=has_next, next_page=next_page
+            ),
             items=enriched,
         )
 
@@ -126,19 +138,30 @@ class Orchestrator:
 
     async def validate(self, spec_list: IssueSpecList) -> ValidationReport:
         start = time.time()
-        report = ValidationReport(owner=spec_list.owner, repo=spec_list.repo, project_title=spec_list.project_title)
+        report = ValidationReport(
+            owner=spec_list.owner,
+            repo=spec_list.repo,
+            project_title=spec_list.project_title,
+        )
         project_id, project_url, _ = await self.ensure_project(
-            spec_list.owner, spec_list.repo, spec_list.project_title, create_if_missing=True if spec_list.dry_run else False
+            spec_list.owner,
+            spec_list.repo,
+            spec_list.project_title,
+            create_if_missing=True if spec_list.dry_run else False,
         )
         report.project_url = project_url
 
         for spec in spec_list.items:
             spec = apply_epic(spec)
-            desired_labels = sorted(set(spec.labels + ([spec.epic_label] if spec.epic_label else [])))
+            sorted(set(spec.labels + ([spec.epic_label] if spec.epic_label else [])))
             try:
-                state = await self._compute_state(spec_list.owner, spec_list.repo, project_id, spec)
+                state = await self._compute_state(
+                    spec_list.owner, spec_list.repo, project_id, spec
+                )
             except Exception as e:
-                report.errors.append(ErrorItem(title=spec.title, reason="lookup_failed", detail=str(e)))
+                report.errors.append(
+                    ErrorItem(title=spec.title, reason="lookup_failed", detail=str(e))
+                )
                 continue
 
             if state["existing"] is None:
@@ -153,7 +176,11 @@ class Orchestrator:
                     changes.append("status")
                 if not changes:
                     report.unchanged.append(
-                        ReportItem(title=spec.title, number=state["existing"]["number"], url=state["existing"]["html_url"])
+                        ReportItem(
+                            title=spec.title,
+                            number=state["existing"]["number"],
+                            url=state["existing"]["html_url"],
+                        )
                     )
                 else:
                     report.updated.append(
@@ -178,24 +205,36 @@ class Orchestrator:
 
     async def sync(self, spec_list: IssueSpecList) -> SyncReport:
         start = time.time()
-        report = SyncReport(owner=spec_list.owner, repo=spec_list.repo, project_title=spec_list.project_title)
+        report = SyncReport(
+            owner=spec_list.owner,
+            repo=spec_list.repo,
+            project_title=spec_list.project_title,
+        )
         project_id, project_url, status_field_info = await self.ensure_project(
-            spec_list.owner, spec_list.repo, spec_list.project_title, create_if_missing=True
+            spec_list.owner,
+            spec_list.repo,
+            spec_list.project_title,
+            create_if_missing=True,
         )
         report.project_url = project_url
         status_field_id, todo_opt_id, _ = status_field_info
 
         for spec in spec_list.items:
             spec = apply_epic(spec)
-            desired_labels = sorted(set(spec.labels + ([spec.epic_label] if spec.epic_label else [])))
+            desired_labels = sorted(
+                set(spec.labels + ([spec.epic_label] if spec.epic_label else []))
+            )
 
             try:
-                state = await self._compute_state(spec_list.owner, spec_list.repo, project_id, spec)
+                state = await self._compute_state(
+                    spec_list.owner, spec_list.repo, project_id, spec
+                )
             except Exception as e:
-                report.errors.append(ErrorItem(title=spec.title, reason="lookup_failed", detail=str(e)))
+                report.errors.append(
+                    ErrorItem(title=spec.title, reason="lookup_failed", detail=str(e))
+                )
                 continue
 
-            created_item = None
             updated_changes: List[str] = []
             try:
                 # ensure labels (idempotent)
@@ -228,9 +267,16 @@ class Orchestrator:
                     if spec_list.dry_run:
                         updated_changes.append("labels")
                     else:
-                        missing = sorted(set(desired_labels) - set(state["existing_labels"]))
+                        missing = sorted(
+                            set(desired_labels) - set(state["existing_labels"])
+                        )
                         if missing:
-                            await self.gh.add_labels(spec_list.owner, spec_list.repo, state["existing"]["number"], missing)
+                            await self.gh.add_labels(
+                                spec_list.owner,
+                                spec_list.repo,
+                                state["existing"]["number"],
+                                missing,
+                            )
                             updated_changes.append("labels")
 
                 # project item add
@@ -238,19 +284,29 @@ class Orchestrator:
                     if spec_list.dry_run:
                         updated_changes.append("project_item")
                     else:
-                        issue_node_id = await self.gh.get_issue_node_id(spec_list.owner, spec_list.repo, state["existing"]["number"])
+                        issue_node_id = await self.gh.get_issue_node_id(
+                            spec_list.owner, spec_list.repo, state["existing"]["number"]
+                        )
                         if issue_node_id:
                             await self.gh.add_item_to_project(project_id, issue_node_id)
                             updated_changes.append("project_item")
 
                 # status set
-                if project_id and state["in_project"] and state["needs_status_update"] and status_field_id and todo_opt_id:
+                if (
+                    project_id
+                    and state["in_project"]
+                    and state["needs_status_update"]
+                    and status_field_id
+                    and todo_opt_id
+                ):
                     if spec_list.dry_run:
                         updated_changes.append("status")
                     else:
                         item_id = state["project_item_id"]
                         if item_id:
-                            await self.gh.update_item_status(project_id, item_id, status_field_id, todo_opt_id)
+                            await self.gh.update_item_status(
+                                project_id, item_id, status_field_id, todo_opt_id
+                            )
                             updated_changes.append("status")
 
                 if not updated_changes:
@@ -272,7 +328,11 @@ class Orchestrator:
                     )
             except GitHubError as e:
                 report.errors.append(
-                    ErrorItem(title=spec.title, reason="github_error", detail=f"{e.status}: {str(e)}")
+                    ErrorItem(
+                        title=spec.title,
+                        reason="github_error",
+                        detail=f"{e.status}: {str(e)}",
+                    )
                 )
 
         total = len(spec_list.items)
@@ -291,7 +351,9 @@ class Orchestrator:
     async def ensure_project(
         self, owner: str, repo: str, project_title: str, *, create_if_missing: bool
     ) -> Tuple[Optional[str], Optional[str], Tuple[Optional[str], Optional[str], dict]]:
-        owner_id, owner_typename, viewer_id, viewer_login = await self.gh.get_repo_owner_and_viewer(owner, repo)
+        owner_id, owner_typename, viewer_id, viewer_login = (
+            await self.gh.get_repo_owner_and_viewer(owner, repo)
+        )
         # Find
         projects = await self.gh.list_projects_for_node(owner_id)
         project_id = None
@@ -305,9 +367,13 @@ class Orchestrator:
         if not project_id and create_if_missing:
             # Try owner then fallback to viewer
             try:
-                project_id, number = await self.gh.create_project(owner_id, project_title)
+                project_id, number = await self.gh.create_project(
+                    owner_id, project_title
+                )
             except GitHubError:
-                project_id, number = await self.gh.create_project(viewer_id, project_title)
+                project_id, number = await self.gh.create_project(
+                    viewer_id, project_title
+                )
 
         project_url = None
         if project_id:
@@ -320,10 +386,14 @@ class Orchestrator:
                 project_url = f"https://github.com/orgs/{owner}/projects/{num}"
         status_field_id, todo_opt_id, opts = (None, None, {})
         if project_id:
-            status_field_id, todo_opt_id, opts = await self.gh.get_status_field_and_option(project_id)
+            status_field_id, todo_opt_id, opts = (
+                await self.gh.get_status_field_and_option(project_id)
+            )
         return project_id, project_url, (status_field_id, todo_opt_id, opts)
 
-    async def _find_existing(self, owner: str, repo: str, title: str) -> Optional[Dict[str, Any]]:
+    async def _find_existing(
+        self, owner: str, repo: str, title: str
+    ) -> Optional[Dict[str, Any]]:
         # Exact title search
         s = await self.gh.search_issues_exact_title(owner, repo, title)
         candidates = list(s)
@@ -331,17 +401,27 @@ class Orchestrator:
         if not candidates:
             target = slugify(title)
             for page in range(1, 6):
-                lst, _, has_next = await self.gh.list_issues(owner, repo, page, per_page=100)
+                lst, _, has_next = await self.gh.list_issues(
+                    owner, repo, page, per_page=100
+                )
                 for it in lst:
                     if "pull_request" in it:
                         continue
                     if slugify(it["title"]) == target:
-                        candidates.append({"number": it["number"], "html_url": it["html_url"], "title": it["title"], "created_at": it["created_at"]})
+                        candidates.append(
+                            {
+                                "number": it["number"],
+                                "html_url": it["html_url"],
+                                "title": it["title"],
+                                "created_at": it["created_at"],
+                            }
+                        )
                 if not has_next:
                     break
 
         if not candidates:
             return None
+
         # Choose oldest by createdAt/created_at
         def created_at(c: Dict[str, Any]) -> str:
             return c.get("created_at") or c.get("createdAt") or ""
@@ -355,7 +435,9 @@ class Orchestrator:
     async def _compute_state(
         self, owner: str, repo: str, project_id: Optional[str], spec: IssueSpec
     ) -> Dict[str, Any]:
-        desired_labels = sorted(set(spec.labels + ([spec.epic_label] if spec.epic_label else [])))
+        desired_labels = sorted(
+            set(spec.labels + ([spec.epic_label] if spec.epic_label else []))
+        )
         existing = await self._find_existing(owner, repo, spec.title)
         if existing is None:
             return {
@@ -368,13 +450,19 @@ class Orchestrator:
                 "desired_labels": desired_labels,
                 "labels_satisfied": False,
             }
-        labels = [l["name"] for l in existing.get("labels", [])] if isinstance(existing.get("labels"), list) else []
+        labels = (
+            [label["name"] for label in existing.get("labels", [])]
+            if isinstance(existing.get("labels"), list)
+            else []
+        )
         in_project = False
         project_item_id = None
         current_status = None
         if project_id:
             try:
-                pid, sname = await self.gh.get_issue_project_item_and_status(owner, repo, existing["number"], project_id)
+                pid, sname = await self.gh.get_issue_project_item_and_status(
+                    owner, repo, existing["number"], project_id
+                )
                 project_item_id, current_status = pid, sname
                 in_project = pid is not None
             except GitHubError:

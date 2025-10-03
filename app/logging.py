@@ -7,7 +7,6 @@ import time
 import uuid
 from typing import Any, Dict
 
-
 REDACTIONS = {"authorization", "proxy-authorization"}
 
 
@@ -34,7 +33,9 @@ def configure_logging(level: str = "INFO") -> None:
 
 
 def redact_headers(headers: Dict[str, str]) -> Dict[str, str]:
-    return {k: ("<redacted>" if k.lower() in REDACTIONS else v) for k, v in headers.items()}
+    return {
+        k: ("<redacted>" if k.lower() in REDACTIONS else v) for k, v in headers.items()
+    }
 
 
 def new_request_id() -> str:
