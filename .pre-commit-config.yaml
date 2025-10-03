@@ -1,0 +1,71 @@
+default_language_version:
+  python: python3.13
+
+repos:
+
+
+  - repo: https://github.com/PyCQA/autoflake
+    rev: v2.3.1
+    hooks:
+      - id: autoflake
+        args:
+          - --remove-all-unused-imports   # Drop any import never used.
+          - --remove-unused-variables     # Drop variables never read.
+          - --ignore-init-module-imports  # In __init__.py, keep re-export imports.
+          - --in-place                    # Edit files on disk (so you can re-add).
+          - --expand-star-imports         # Replace 'from x import *' when safe.
+
+  - repo: https://github.com/pycqa/isort
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        exclude: '\.(ipynb)$|^comment_categorization/'
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.13.1
+    hooks:
+      - id: ruff
+        args: ["--fix"]         # Auto-apply safe fixes (e.g., F401/F841, many style nits).
+        exclude: ^comment_categorization/
+
+  - repo: https://github.com/psf/black
+    rev: 24.8.0
+    hooks:
+      - id: black
+        exclude: '\.(ipynb)$|^comment_categorization/'
+                                # One-true-formatter pass after imports are sorted and
+                                # lints are fixed. Running Black *after* isort is the
+                                # standard recipe.
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: end-of-file-fixer
+        exclude: '^tests/fixtures/|\.(ipynb)$' # Ensure a single terminal newline (POSIX + many tools expect it).
+      - id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md,mdx"]
+                                # Remove trailing spaces everywhere *except* in files with
+                                # these extensions when the spaces are Markdown hard-wraps.
+                                # It preserves lines that end with **two spaces** in .md/.mdx.
+        exclude: '^tests/fixtures/|\.(ipynb)$'
+      - id: check-merge-conflict # Fails if a file still has <<<<<<< ======= >>>>>>> markers.
+
+  - repo: local
+    hooks:
+      - id: pytest-unit
+        name: pytest -m unit
+        entry: scripts/hooks/run_pytest.sh
+        args: ["unit"]
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+      - id: pytest-integration
+        name: pytest -m integration
+        entry: scripts/hooks/run_pytest.sh
+        args: ["integration"]
+        language: system
+        pass_filenames: false
+        stages: [manual]
